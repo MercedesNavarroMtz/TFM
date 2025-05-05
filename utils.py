@@ -28,9 +28,21 @@ def obtener_datos(url):
     return df
 
 def bassic_preprocessing(df):
-   ''' Función que haga un pequeño resumen para todos los sensores'''
-   print('Info del DF', df.info()) 
-   print('Estadisticas del DF', df.describe())
+    '''Función que hace un resumen general de un DataFrame con sensores'''
+    
+    print(">> Información general del DataFrame:")
+    print(df.info())
+    print("\n>> Estadísticas descriptivas:")
+    print(df.describe())
+    
+    print("\n>> Valores nulos por columna:")
+    print(df.isnull().sum())
+
+    print(f"\n>> Filas duplicadas: {df.duplicated().sum()}")
+
+    print("\n>> Primeras 5 filas del DataFrame:")
+    print(df.head())
+
 
 def representacion_umbral_carga(df, sensor_name):
     x = df['date_time']
@@ -63,6 +75,15 @@ bassic_preprocessing(sensor_nu2)
 bassic_preprocessing(sensor_nu3)
 bassic_preprocessing(sensor_nu4)
 
+#%%
+sensor_nu1 = sensor_nu1.drop_duplicates()
+sensor_nu2 = sensor_nu2.drop_duplicates()
+sensor_nu3 = sensor_nu3.drop_duplicates()
+sensor_nu4 = sensor_nu4.drop_duplicates()
+
+
+
+#%%
 # Filtramos a las fechas comunes
 start_date = pd.to_datetime("2023-07-11")
 end_date = pd.to_datetime("2024-05-02")
@@ -73,25 +94,15 @@ sensor_nu3 = sensor_nu3[(sensor_nu3['date_time'] >= start_date) & (sensor_nu3['d
 sensor_nu4 = sensor_nu4[(sensor_nu4['date_time'] >= start_date) & (sensor_nu4['date_time'] <= end_date)]
 
 
-#  Vemos cuales son las fechas comunes
-fechas_comunes = set(sensor_nu1['date_time']).intersection(
-    sensor_nu2['date_time'],
-    sensor_nu2['date_time'],
-    sensor_nu2['date_time']
-)
 
-df1_comun = sensor_nu1[sensor_nu1['date_time'].isin(fechas_comunes)]
-df2_comun = sensor_nu2[sensor_nu2['date_time'].isin(fechas_comunes)]
-df3_comun = sensor_nu3[sensor_nu3['date_time'].isin(fechas_comunes)]
-df4_comun = sensor_nu4[sensor_nu4['date_time'].isin(fechas_comunes)]
 
 # Hemos dejado solo las fechas comines y hacemos un merge para quedarnos con un solo df
-df_carga_merged = df1_comun.merge(df2_comun, on='date_time', suffixes=('_nu1', '_nu2')) \
-                     .merge(df3_comun, on='date_time', suffixes=('', '_nu3')) \
-                     .merge(df4_comun, on='date_time', suffixes=('', '_nu4'))
+df_carga_merged = sensor_nu1.merge(sensor_nu2, on='date_time', suffixes=('_nu1', '_nu2')) \
+                     .merge(sensor_nu3, on='date_time', suffixes=('', '_nu3')) \
+                     .merge(sensor_nu4, on='date_time', suffixes=('', '_nu4'))
 
 
-# df_carga_merged.to_csv('carga_min_unidos.csv', index=False) 
+
 
 columnas = [col for col in df_carga_merged.columns if col.startswith('weight') or col == 'date_time']
 df_carga_merged = df_carga_merged.loc[:, columnas]
@@ -105,8 +116,8 @@ df_carga_2024 = df_carga_merged[df_carga_merged['date_time'].dt.year == 2024]
 
 representacion_umbral_carga(df_carga_2024, 'weight_nu4')
 
-
-
+#%%
+df_carga_2024.to_csv('carga.csv', index=False) 
 
 
 
@@ -115,7 +126,11 @@ representacion_umbral_carga(df_carga_2024, 'weight_nu4')
 corr_aqua101=obtener_datos("https://www.ctndatabase.ctnaval.com/aquamore/corr_sensor")
 bassic_preprocessing(corr_aqua101)
 
+corr_aqua101[corr_aqua101.duplicated()]
+
+
 del corr_aqua101['temperature']
+del corr_aqua101['id']
 
 # Grafico con todas las corrientes --------------------------------------
 fig, ax = plt.subplots(figsize=(12, 6))
@@ -160,7 +175,6 @@ plt.tight_layout()
 plt.show()
 
 corr_aqua101 = corr_aqua101.iloc[:, :-18] # Eliminamos variables que no sirven
-# corr_aqua101 = pd.read_csv('correntimetro.csv')
 
 #Graficos de dirección - rosa de los vientos --------------------
 
@@ -183,11 +197,11 @@ plt.tight_layout()
 plt.show()
 
 
+corr_aqua101.to_csv('corriente.csv', index=False)
 
 #%% RED 
 
 
-import pandas as pd
 from functools import reduce
 sensor_43 = obtener_datos("https://www.ctndatabase.ctnaval.com/aquamore/sclfloat_sensors/?sensor_name=43")
 sensor_44 = obtener_datos("https://www.ctndatabase.ctnaval.com/aquamore/sclfloat_sensors/?sensor_name=44")
@@ -197,7 +211,16 @@ sensor_47 = obtener_datos("https://www.ctndatabase.ctnaval.com/aquamore/sclfloat
 sensor_48 = obtener_datos("https://www.ctndatabase.ctnaval.com/aquamore/sclfloat_sensors/?sensor_name=48")
 sensor_49 = obtener_datos("https://www.ctndatabase.ctnaval.com/aquamore/sclfloat_sensors/?sensor_name=49")
 # %%
+sensor_43 = sensor_43.drop_duplicates()
+sensor_44 = sensor_44.drop_duplicates()
+sensor_45 = sensor_45.drop_duplicates()
+sensor_46 = sensor_46.drop_duplicates()
+sensor_47 = sensor_47.drop_duplicates()
+sensor_48 = sensor_48.drop_duplicates()
+sensor_49 = sensor_49.drop_duplicates()
 
+
+#%%
 bassic_preprocessing(sensor_43)
 bassic_preprocessing(sensor_44)
 bassic_preprocessing(sensor_45)
@@ -304,26 +327,30 @@ for i in range(43, 50):
     plt.show()
 
 
-# Mergeamos ------------------- REVISAR
+#%% Mergeamos
 
-sensor_dfs = []
+def renombrar_columnas(df, sensor_id):
+    df = df.copy()
+    df.columns = [
+        col if col == "date_time" else f"{col}_{sensor_id}"
+        for col in df.columns
+    ]
+    return df
+sensor_43 = renombrar_columnas(sensor_43, 43)
+sensor_44 = renombrar_columnas(sensor_44, 44)
+sensor_45 = renombrar_columnas(sensor_45, 45)
+sensor_46 = renombrar_columnas(sensor_46, 46)
+sensor_47 = renombrar_columnas(sensor_47, 47)
+sensor_48 = renombrar_columnas(sensor_48, 48)
+sensor_49 = renombrar_columnas(sensor_49, 49)
+#%%
+from functools import reduce
 
-for i in range(43, 50):
-    df = globals()[f'sensor_{i}'].copy()
-    df['date_time'] = pd.to_datetime(df['date_time'])
-    df = df.loc[:, ~df.columns.str.contains('color')]
-    df = df.drop_duplicates(subset='date_time', keep='first')  # <-- aquí
-
-    df = df.rename(columns={col: f'{col}_{i}' for col in df.columns if col != 'date_time'})
-    sensor_dfs.append(df)
-
-merged_red = reduce(lambda left, right: pd.merge(left, right, on='date_time', how='inner'), sensor_dfs)
-merged_red = merged_red.loc[:, ~merged_red.columns.str.startswith(('id_', 'sensor_'))]
-
-merged_red = merged_red.sort_values('date_time').reset_index(drop=True)
+dfs = [sensor_43, sensor_44, sensor_45, sensor_46, sensor_47, sensor_48, sensor_49]
+merged_red = reduce(lambda left, right: pd.merge(left, right, on='date_time', how='inner'), dfs)
 
 #%%
-# merged_red.to_csv('red_unidos.csv', index=False)
+merged_red.to_csv('red.csv', index=False)
 
 # %%
 
@@ -337,6 +364,11 @@ sensor_62 = obtener_datos("https://www.ctndatabase.ctnaval.com/aquamore/sclfloat
 sensor_63 = obtener_datos("https://www.ctndatabase.ctnaval.com/aquamore/sclfloat_sensors/?sensor_name=63")
 
 #%%
+sensor_60 = sensor_60.drop_duplicates()
+sensor_61 = sensor_61.drop_duplicates()
+sensor_62 = sensor_62.drop_duplicates()
+sensor_63 = sensor_63.drop_duplicates()
+
 bassic_preprocessing(sensor_60)
 bassic_preprocessing(sensor_61)
 bassic_preprocessing(sensor_62)
@@ -412,251 +444,95 @@ for i in range(60, 64):
 
 
 # %%
-import pandas as pd
-from functools import reduce
+sensor_60 = renombrar_columnas(sensor_60, 60)
+sensor_61 = renombrar_columnas(sensor_61, 61)
+sensor_62 = renombrar_columnas(sensor_62, 62)
+sensor_63 = renombrar_columnas(sensor_63, 63)
 
-sensor_dfs = []
+dfs = [sensor_60, sensor_61, sensor_62, sensor_63]
+merged_flot = reduce(lambda left, right: pd.merge(left, right, on='date_time', how='inner'), dfs)
 
-for i in range(60, 64):
-    df = globals()[f'sensor_{i}'].copy()
-    df['date_time'] = pd.to_datetime(df['date_time'])
-
-    # Eliminar columnas con 'color' en el nombre
-    df = df.loc[:, ~df.columns.str.contains('color')]
-    df = df.drop_duplicates(subset='date_time', keep='first')  # <-- aquí
-
-    # Renombrar columnas (excepto 'date_time')
-    df = df.rename(columns={col: f'{col}_{i}' for col in df.columns if col != 'date_time'})
-
-    sensor_dfs.append(df)
-
-# Merge progresivo por 'date_time'
-mergedFLOT_df = reduce(lambda left, right: pd.merge(left, right, on='date_time', how='inner'), sensor_dfs)
-
-# Eliminar columnas que empiezan por 'id_' o 'sensor_'
-mergedFLOT_df = mergedFLOT_df.loc[:, ~mergedFLOT_df.columns.str.startswith(('id_', 'sensor_'))]
-
-# Ordenar por fecha
-mergedFLOT_df = mergedFLOT_df.sort_values('date_time').reset_index(drop=True)
-
-print(mergedFLOT_df.head())
-# %%
-
-# mergedFLOT_df.to_csv('flot_unidos.csv', index=False)
+merged_flot.to_csv('flot.csv', index=False)
 # %% MODELOSSSS------------------------::
 
 
 
 # %%
-# %%
 import pandas as pd
-carga=pd.read_csv('carga_min_unidos.csv')
-red=pd.read_csv('red_unidos.csv')
-flot = pd.read_csv('flot_unidos.csv')
-corr = pd.read_csv('correntimetro.csv')
+carga=pd.read_csv('carga.csv')
+red=pd.read_csv('red.csv')
+flot = pd.read_csv('flot.csv')
+corr = pd.read_csv('corriente.csv')
 
 carga['date_time'] = pd.to_datetime(carga['date_time'])
 red['date_time'] = pd.to_datetime(red['date_time'])
 flot['date_time'] = pd.to_datetime(flot['date_time'])
 corr['date_time'] = pd.to_datetime(corr['date_time'])
 
-carga = carga.drop_duplicates(subset='date_time', keep='first')
-red = red.drop_duplicates(subset='date_time', keep='first')
-flot = flot.drop_duplicates(subset='date_time', keep='first')
-corr = corr.drop_duplicates(subset='date_time', keep='first')
 
-
-
-
-#%%
-carga = carga[carga['date_time'].dt.year == 2024]
-
-# %%
+# %% METODO INTERPOLADO
 # Realizar merges sucesivos
 df_merged = carga.merge(red, on='date_time', how='outer') \
                .merge(flot, on='date_time', how='outer') \
                .merge(corr, on='date_time', how='outer')
 
-# Ordenar por fecha si lo necesitas
-df_merged = df_merged.sort_values('date_time').reset_index(drop=True)
-# %%
-df_merged['date_time'].max()
-# %%
-# df_merged.to_csv('mergeados_los4.csv', index=False)
-# %%
-# import matplotlib.pyplot as plt
+# Revisamos y eliminamos las columnas id y sensor que no aportan info
+df_merged = df_merged.loc[:, ~df_merged.columns.get_level_values(0).str.startswith(('id_', 'sensor_'))]
+df_merged[df_merged.duplicated()]
 
-# # Elige la variable que quieres graficar
-# variable_y = 'weight_nu1'  # cámbiala por la que desees
 
-# # Crear la gráfica
-# plt.figure(figsize=(12, 6))
-# plt.plot(df_merged['date_time'], df_merged[variable_y], label=variable_y)
-
-# # Etiquetas y título
-# plt.xlabel('Fecha')
-# plt.ylabel(variable_y)
-# plt.title(f'Serie temporal de {variable_y}')
-# plt.legend()
-# plt.grid(True)
-# plt.tight_layout()
-# plt.show()
-
-# %%
+#Interpolamos para quitar valores vacíos
 df_merged = df_merged.set_index('date_time')
 df_merged = df_merged.interpolate(method='time', order=2)
-df_merged = df_merged.reset_index()  # Si
-# %%
+df_merged = df_merged.reset_index()  #
+
+
 df_merged = df_merged.dropna()
-# %%
+
+# Escalado de datos
 from sklearn.preprocessing import StandardScaler
 
-# Seleccionar solo las columnas numéricas (excluyendo date_time)
 variables = df_merged.select_dtypes(include='number').columns
 
-# Crear el escalador
 scaler = StandardScaler()
 
-# Aplicar el escalado
 df_scaled = df_merged.copy()
 df_scaled[variables] = scaler.fit_transform(df_merged[variables])
 
-# %%
-# df_scaled.to_csv('mergeados_interpolados_normalizados.csv', index=False)
 
-# %%
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-import numpy as np
-from sklearn.ensemble import GradientBoostingRegressor
-from sklearn.linear_model import LinearRegression
-import numpy as np
+df_scaled.to_csv('mergeados_interpolados_normalizados.csv', index=False)
 
-def probar_modelos(df, columna_objetivo, columnas_features, modelos, test_size=0.3):
-    X = df[columnas_features]
-    y = df[columna_objetivo]
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42, shuffle=True)
+# %% METODO MERGE FECHAS CERCANAS
 
-    resultados = {}
-
-    for nombre, modelo in modelos.items():
-        modelo.fit(X_train, y_train)
-
-        # Predicciones
-        y_train_pred = modelo.predict(X_train)
-        y_test_pred = modelo.predict(X_test)
-
-        # Métricas en entrenamiento
-        mse_train = mean_squared_error(y_train, y_train_pred)
-        mae_train = mean_absolute_error(y_train, y_train_pred)
-        r2_train = r2_score(y_train, y_train_pred)
-
-        # Métricas en test
-        mse_test = mean_squared_error(y_test, y_test_pred)
-        mae_test = mean_absolute_error(y_test, y_test_pred)
-        r2_test = r2_score(y_test, y_test_pred)
-
-        # Guardar resultados
-        resultados[nombre] = {
-            'MSE Train': mse_train,
-            'MAE Train': mae_train,
-            'R2 Train': r2_train,
-            'MSE Test': mse_test,
-            'MAE Test': mae_test,
-            'R2 Test': r2_test
-        }
-            # Predicciones
-    
-
-    
-        # Gráfico de prueba
-        plt.figure(figsize=(10, 6))
-        plt.scatter(y_test, y_test_pred, alpha=0.7)
-
-        # Configurar el gráfico
-        plt.xlabel('Valores Reales', fontsize=12)
-        plt.ylabel('Predicciones', fontsize=12)
-        plt.title('Valores reales vs predichos (Random Forest)', fontsize=14)
-        plt.grid(True, alpha=0.3)
-
-        plt.tight_layout()
-        plt.show()
-
-
-    return resultados
-
-# modelos = {
-#     'RandomForest': RandomForestRegressor(random_state=42, n_estimators=15, max_depth=3),
-#     'GradientBoosting': GradientBoostingRegressor(random_state=42, n_estimators=25, learning_rate=0.05, max_depth=3),
-#     'LinearRegression': LinearRegression()
-# }
-
-# # columnas_features = df_scaled.drop(columns=['weight_nu1', 'weight_nu2','weight_nu3','weight_nu4','date_time']).columns
-# # resultados = probar_modelos(df_scaled, 'weight_nu1', columnas_features, modelos)
-
-
-# # %%
-# df_resultados = pd.DataFrame(resultados).T  # Transponer para ver modelos en filas
-# print(df_resultados)
-
-# %%
-
-merged = pd.merge_asof(carga.sort_values('date_time'), 
-                       red.sort_values('date_time'),
-                       corr.sort_values('date_time'), 
-                       flot.sort_values('date_time'),  
-                       on='date_time', 
-                       direction='nearest')
-
-# %% aqui sin interpolar se agrupa por fecha mas cercacnaaaaaa
-# umbral_tiempo = pd.Timedelta(minutes=15)
 
 # Ordenar todos los DataFrames por fecha
 carga = carga.sort_values('date_time')
-carga = carga[carga['date_time'].dt.year == 2024]
-
 red = red.sort_values('date_time')
 flot = flot.sort_values('date_time')
 corr = corr.sort_values('date_time')
 
 # Realizar el merge sucesivo entre los DataFrames
-merged = pd.merge_asof(carga, red, on='date_time', direction='nearest')
-merged = pd.merge_asof(merged, flot, on='date_time', direction='nearest')
-merged = pd.merge_asof(merged, corr, on='date_time', direction='nearest')
-# %%
-merged = merged.dropna()
+merged_fecha = pd.merge_asof(carga, red, on='date_time', direction='nearest')
+merged_fecha = pd.merge_asof(merged_fecha, flot, on='date_time', direction='nearest')
+merged_fecha = pd.merge_asof(merged_fecha, corr, on='date_time', direction='nearest')
+
+merged_fecha = merged_fecha.dropna()
 
 # %%
-from sklearn.preprocessing import StandardScaler
 
 # Seleccionar solo las columnas numéricas (excluyendo date_time)
-variables = merged.select_dtypes(include='number').columns
+variables = merged_fecha.select_dtypes(include='number').columns
 
 # Crear el escalador
 scaler = StandardScaler()
 
 # Aplicar el escalado
-df_scaled = merged.copy()
-df_scaled[variables] = scaler.fit_transform(merged[variables])
-#%%
-modelos = {
-    'RandomForest': RandomForestRegressor(random_state=42, n_estimators=100, max_depth=5),
-    'GradientBoosting': GradientBoostingRegressor(random_state=42, n_estimators=100, learning_rate=0.01, max_depth=5),
-    'LinearRegression': LinearRegression()
-}
-modelos_nu3 = {
-    'RandomForest': RandomForestRegressor(random_state=42,min_samples_leaf=1,min_samples_split=5, n_estimators=200, max_depth=None),
-    'GradientBoosting': GradientBoostingRegressor(random_state=42, n_estimators=200, learning_rate=0.1, max_depth=7),
-    'LinearRegression': LinearRegression()
-}
+df_scaled_fecha = merged_fecha.copy()
+df_scaled_fecha[variables] = scaler.fit_transform(merged_fecha[variables])
 
-
-columnas_features = df_scaled.drop(columns=['weight_nu1', 'weight_nu2','weight_nu3','weight_nu4','date_time']).columns
-resultados = probar_modelos(df_scaled, 'weight_nu4', columnas_features, modelos_nu3)
 #%%
-df_resultados = pd.DataFrame(resultados).T  # Transponer para ver modelos en filas
-print(df_resultados)
+df_scaled_fecha.to_csv('mergeados_normalizados.csv', index=False)
+
 # %% GRID SEARCH 
 
 from sklearn.model_selection import train_test_split, GridSearchCV
@@ -667,7 +543,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 # Definir los parámetros para Grid Search
-parametros_rf_nu3 = {
+parametros_rf = {
     'n_estimators': [100, 150, 200],  # Número de árboles en el bosque
     'max_depth': [5, 10, None],        # Profundidad máxima de los árboles
     'min_samples_split': [2, 5, 10],   # Mínimo número de muestras requeridas para dividir un nodo
@@ -675,7 +551,7 @@ parametros_rf_nu3 = {
     'bootstrap': [True, False]         # Si usar o no muestreo bootstrap
 }
 
-parametros_gb_nu3 = {
+parametros_gb = {
     'n_estimators': [100, 150, 200],  # Número de árboles en el modelo
     'learning_rate': [0.01, 0.05, 0.1], # Tasa de aprendizaje
     'max_depth': [3, 5, 7],            # Profundidad máxima de los árboles
@@ -756,17 +632,33 @@ def probar_modelos_con_gridsearch(df, columna_objetivo, columnas_features, model
 
     return resultados
 
-# Ejemplo de uso
-# (Asumiendo que df_scaled ya está definido)
-columnas_features = df_scaled.drop(columns=['weight_nu1', 'weight_nu2','weight_nu3','weight_nu4','date_time']).columns
 
-resultados_nu3 = probar_modelos_con_gridsearch(df_scaled, 'weight_nu4', columnas_features, modelos, {
-    'RandomForest': parametros_rf_nu3,
-    'GradientBoosting': parametros_gb_nu3,
+
+#%%
+import pandas as pd
+interpolados = pd.read_csv('mergeados_interpolados_normalizados.csv')
+por_fecha = pd.read_csv('mergeados_normalizados.csv')
+#%%
+
+columna_objetivo = 'weight_nu4'
+
+columnas_features = por_fecha.drop(columns=['weight_nu1', 'weight_nu2','weight_nu3','weight_nu4','date_time']).columns
+
+resultados_nu = probar_modelos_con_gridsearch(por_fecha, columna_objetivo, columnas_features, modelos, {
+    'RandomForest': parametros_rf,
+    'GradientBoosting': parametros_gb,
     'LinearRegression': {}  # Sin parámetros para LinearRegression, ya que no usa GridSearchCV
 })
 
 # Mostrar los resultados
-df_resultados = pd.DataFrame(resultados_nu3).T  # Transponer para ver modelos en filas
-print(df_resultados)
+df_resultados = pd.DataFrame(resultados_nu).T  # Transponer para ver modelos en filas
+
+#%%
+nombre_df = 'por_fecha'
+# Crear el nombre del archivo
+nombre_archivo = f"resultados_{columna_objetivo}_{nombre_df}.xlsx"
+# Guardar el DataFrame en Excel
+df_resultados.to_excel(nombre_archivo)
+
+
 # %%
