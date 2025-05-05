@@ -454,26 +454,13 @@ df_flot_merged = reduce(lambda left, right: pd.merge(left, right, on='date_time'
 df_flot_merged.to_csv('flot.csv', index=False)
 # %% MODELOSSSS------------------------::
 
-
-
-# %%
-import pandas as pd
-carga=pd.read_csv(r"C:\Users\Mercedes\Downloads\carga.csv")
-red=pd.read_csv(r"C:\Users\Mercedes\Downloads\corriente.csv")
-flot = pd.read_csv(r"C:\Users\Mercedes\Downloads\flot.csv")
-corr = pd.read_csv(r"C:\Users\Mercedes\Downloads\corriente.csv")
-
-carga['date_time'] = pd.to_datetime(carga['date_time'])
-red['date_time'] = pd.to_datetime(red['date_time'])
-flot['date_time'] = pd.to_datetime(flot['date_time'])
-corr['date_time'] = pd.to_datetime(corr['date_time'])
-
-
 # %% METODO INTERPOLADO
 # Realizar merges sucesivos
-df_merged = carga.merge(red, on='date_time', how='outer') \
-               .merge(flot, on='date_time', how='outer') \
-               .merge(corr, on='date_time', how='outer')
+df_merged = df_carga_merged.merge(df_red_merged, on='date_time', how='outer') \
+               .merge(corr_aqua101, on='date_time', how='outer') \
+               .merge(df_flot_merged, on='date_time', how='outer')
+
+#%%
 
 # Revisamos y eliminamos las columnas id y sensor que no aportan info
 df_merged = df_merged.loc[:, ~df_merged.columns.get_level_values(0).str.startswith(('id_', 'sensor_'))]
@@ -495,25 +482,18 @@ variables = df_merged.select_dtypes(include='number').columns
 
 scaler = StandardScaler()
 
-df_scaled = df_merged.copy()
-df_scaled[variables] = scaler.fit_transform(df_merged[variables])
+df_scaled_interpolado = df_merged.copy()
+df_scaled_interpolado[variables] = scaler.fit_transform(df_merged[variables])
 
 
-# df_scaled.to_csv('mergeados_interpolados_normalizados.csv', index=False)
+# df_scaled_interpolado.to_csv('mergeados_interpolados_normalizados.csv', index=False)
 
 # %% METODO MERGE FECHAS CERCANAS
 
-
-# Ordenar todos los DataFrames por fecha
-carga = carga.sort_values('date_time')
-red = red.sort_values('date_time')
-flot = flot.sort_values('date_time')
-corr = corr.sort_values('date_time')
-
 # Realizar el merge sucesivo entre los DataFrames
-merged_fecha = pd.merge_asof(carga, red, on='date_time', direction='nearest')
-merged_fecha = pd.merge_asof(merged_fecha, flot, on='date_time', direction='nearest')
-merged_fecha = pd.merge_asof(merged_fecha, corr, on='date_time', direction='nearest')
+merged_fecha = pd.merge_asof(df_carga_merged, df_red_merged, on='date_time', direction='nearest')
+merged_fecha = pd.merge_asof(merged_fecha, df_flot_merged, on='date_time', direction='nearest')
+merged_fecha = pd.merge_asof(merged_fecha, corr_aqua101, on='date_time', direction='nearest')
 
 merged_fecha = merged_fecha.dropna()
 
@@ -530,7 +510,7 @@ df_scaled_fecha = merged_fecha.copy()
 df_scaled_fecha[variables] = scaler.fit_transform(merged_fecha[variables])
 
 #%%
-df_scaled_fecha.to_csv('mergeados_normalizados.csv', index=False)
+# df_scaled_fecha.to_csv('mergeados_normalizados.csv', index=False)
 
 # %% GRID SEARCH 
 
@@ -650,13 +630,11 @@ resultados_nu = probar_modelos_con_gridsearch(por_fecha, columna_objetivo, colum
 })
 
 # Mostrar los resultados
-df_resultados = pd.DataFrame(resultados_nu).T  # Transponer para ver modelos en filas
+df_resultados = pd.DataFrame(resultados_nu).T 
 
 #%%
 nombre_df = 'por_fecha'
-# Crear el nombre del archivo
 nombre_archivo = f"resultados_{columna_objetivo}_{nombre_df}.xlsx"
-# Guardar el DataFrame en Excel
 df_resultados.to_excel(nombre_archivo)
 
 
