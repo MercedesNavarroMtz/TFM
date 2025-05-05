@@ -52,10 +52,11 @@ def representacion_umbral_carga(df, sensor_name):
     plt.figure(figsize=(14, 6))
     plt.scatter(x[~mask], y[~mask], alpha=0.6)
     plt.scatter(x[mask], y[mask], color='red', label='> 85000', alpha=0.8)
+    plt.axhline(y=0, color='black', linestyle='--', linewidth=1)
 
-    plt.xlabel('Fecha')
-    plt.ylabel('Valor')
-    plt.title(f'Serie temporal de sensor carga {sensor_name}',fontweight='bold')
+    plt.xlabel('Fecha',fontsize=18)
+    plt.ylabel('Carga [kg]',fontsize=18)
+    plt.title(f'Serie temporal de sensor carga {sensor_name}', fontsize=15)
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
@@ -108,16 +109,16 @@ columnas = [col for col in df_carga_merged.columns if col.startswith('weight') o
 df_carga_merged = df_carga_merged.loc[:, columnas]
 
 df_carga_merged = df_carga_merged.rename(columns={'weight': 'weight_nu3'})
-
+#%%
+representacion_umbral_carga(df_carga_merged, 'weight_nu4')
+#%%
+#  DEJAMOS SOLO VALORES DE 2024 porque los de 2023 son muy pcoos valores y outliers
+df_carga_merged = df_carga_merged[df_carga_merged['date_time'].dt.year == 2024]
+#%%
 representacion_umbral_carga(df_carga_merged, 'weight_nu4')
 
-#  DEJAMOS SOLO VALORES DE 2024 porque los de 2023 son muy pcoos valores y outliers
-df_carga_2024 = df_carga_merged[df_carga_merged['date_time'].dt.year == 2024]
-
-representacion_umbral_carga(df_carga_2024, 'weight_nu4')
-
 #%%
-df_carga_2024.to_csv('carga.csv', index=False) 
+df_carga_merged.to_csv('carga.csv', index=False) 
 
 
 
@@ -125,8 +126,6 @@ df_carga_2024.to_csv('carga.csv', index=False)
 
 corr_aqua101=obtener_datos("https://www.ctndatabase.ctnaval.com/aquamore/corr_sensor")
 bassic_preprocessing(corr_aqua101)
-
-corr_aqua101[corr_aqua101.duplicated()]
 
 
 del corr_aqua101['temperature']
@@ -197,7 +196,7 @@ plt.tight_layout()
 plt.show()
 
 
-corr_aqua101.to_csv('corriente.csv', index=False)
+# corr_aqua101.to_csv('corriente.csv', index=False)
 
 #%% RED 
 
@@ -347,10 +346,10 @@ sensor_49 = renombrar_columnas(sensor_49, 49)
 from functools import reduce
 
 dfs = [sensor_43, sensor_44, sensor_45, sensor_46, sensor_47, sensor_48, sensor_49]
-merged_red = reduce(lambda left, right: pd.merge(left, right, on='date_time', how='inner'), dfs)
+df_red_merged = reduce(lambda left, right: pd.merge(left, right, on='date_time', how='inner'), dfs)
 
 #%%
-merged_red.to_csv('red.csv', index=False)
+df_red_merged.to_csv('red.csv', index=False)
 
 # %%
 
@@ -450,19 +449,19 @@ sensor_62 = renombrar_columnas(sensor_62, 62)
 sensor_63 = renombrar_columnas(sensor_63, 63)
 
 dfs = [sensor_60, sensor_61, sensor_62, sensor_63]
-merged_flot = reduce(lambda left, right: pd.merge(left, right, on='date_time', how='inner'), dfs)
+df_flot_merged = reduce(lambda left, right: pd.merge(left, right, on='date_time', how='inner'), dfs)
 
-merged_flot.to_csv('flot.csv', index=False)
+df_flot_merged.to_csv('flot.csv', index=False)
 # %% MODELOSSSS------------------------::
 
 
 
 # %%
 import pandas as pd
-carga=pd.read_csv('carga.csv')
-red=pd.read_csv('red.csv')
-flot = pd.read_csv('flot.csv')
-corr = pd.read_csv('corriente.csv')
+carga=pd.read_csv(r"C:\Users\Mercedes\Downloads\carga.csv")
+red=pd.read_csv(r"C:\Users\Mercedes\Downloads\corriente.csv")
+flot = pd.read_csv(r"C:\Users\Mercedes\Downloads\flot.csv")
+corr = pd.read_csv(r"C:\Users\Mercedes\Downloads\corriente.csv")
 
 carga['date_time'] = pd.to_datetime(carga['date_time'])
 red['date_time'] = pd.to_datetime(red['date_time'])
@@ -500,7 +499,7 @@ df_scaled = df_merged.copy()
 df_scaled[variables] = scaler.fit_transform(df_merged[variables])
 
 
-df_scaled.to_csv('mergeados_interpolados_normalizados.csv', index=False)
+# df_scaled.to_csv('mergeados_interpolados_normalizados.csv', index=False)
 
 # %% METODO MERGE FECHAS CERCANAS
 
