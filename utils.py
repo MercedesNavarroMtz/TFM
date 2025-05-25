@@ -14,20 +14,17 @@ from sklearn.model_selection import  KFold
 
  #===========================================================
 def obtener_datos(url):
-    """
-    
-    
-    """
+
+    """Función de petición GET para obtener los datos de los sensores"""
 
     all_results = []
-
     while url:
         response = requests.get(url)
         if response.status_code == 200:
             data = response.json()
             results = data.get("results", [])
             all_results.extend(results)
-            url = data.get("next")  # Avanza a la siguiente página si existe
+            url = data.get("next")  # Avanza a la siguiente página
         else:
             print(f"Error: {response.status_code}")
             break
@@ -40,6 +37,7 @@ def obtener_datos(url):
 #===========================================================
 
 def bassic_preprocessing(df):
+
     """Función que hace un resumen general de un DataFrame con sensores"""
     
     print(">> Información general del DataFrame:")
@@ -115,48 +113,7 @@ def remove_outliers_may_2024(df, column):
     return df
 
 #========================================================
-def representar_sensores_red(inicio, fin, aplicar_limpieza=False):
-    """
-    Procesa y grafica los datos de pitch y roll para sensores en el rango dado.
 
-    Args:
-        inicio (int): Número inicial del sensor
-        fin (int): Número final del sensor
-        aplicar_limpieza (bool): Si True, elimina outliers de mayo 2024.
-    """
-    for i in range(inicio, fin + 1):
-        df = globals()[f'sensor_{i}'].copy()
-        df['date_time'] = pd.to_datetime(df['date_time'])
-
-        if aplicar_limpieza:
-            df = remove_outliers_may_2024(df, 'pitch')
-            df = remove_outliers_may_2024(df, 'roll')
-
-        mean_pitch = df['pitch'].mean()
-        mean_roll = df['roll'].mean()
-
-        df['pitch_color'] = df['pitch'].apply(lambda x: color_points(x, mean_pitch))
-        df['roll_color'] = df['roll'].apply(lambda x: color_points(x, mean_roll))
-
-        # Gráfico
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15, 8), sharex=True)
-        fig.suptitle(f'Sensor {i}', fontsize=16)
-
-        ax1.scatter(df['date_time'], df['pitch'], c=df['pitch_color'])
-        ax1.axhline(mean_pitch, color='gray', linestyle='--', label='Media Pitch')
-        ax1.set_ylabel('Pitch')
-        ax1.legend()
-        ax1.set_title('Pitch')
-
-        ax2.scatter(df['date_time'], df['roll'], c=df['roll_color'])
-        ax2.axhline(mean_roll, color='gray', linestyle='--', label='Media Roll')
-        ax2.set_ylabel('Roll')
-        ax2.set_xlabel('Fecha')
-        ax2.legend()
-        ax2.set_title('Roll')
-
-        plt.tight_layout()
-        plt.show()
 
 #======================================================
 def renombrar_columnas(df, sensor_id):

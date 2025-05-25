@@ -1,3 +1,4 @@
+#%%
 from utils import *
 from functools import reduce
 from sklearn.preprocessing import StandardScaler
@@ -86,7 +87,49 @@ sensor_47 = sensor_47.drop_duplicates()
 sensor_48 = sensor_48.drop_duplicates()
 sensor_49 = sensor_49.drop_duplicates()
 
+#%%
+def representar_sensores_red(inicio, fin, aplicar_limpieza=False):
+    """
+    Procesa y grafica los datos de pitch y roll para sensores en el rango dado.
 
+    Args:
+        inicio (int): Número inicial del sensor
+        fin (int): Número final del sensor
+        aplicar_limpieza (bool): Si True, elimina outliers de mayo 2024.
+    """
+    for i in range(inicio, fin + 1):
+        df = globals()[f'sensor_{i}'].copy()
+        df['date_time'] = pd.to_datetime(df['date_time'])
+
+        if aplicar_limpieza:
+            df = remove_outliers_may_2024(df, 'pitch')
+            df = remove_outliers_may_2024(df, 'roll')
+
+        mean_pitch = df['pitch'].mean()
+        mean_roll = df['roll'].mean()
+
+        df['pitch_color'] = df['pitch'].apply(lambda x: color_points(x, mean_pitch))
+        df['roll_color'] = df['roll'].apply(lambda x: color_points(x, mean_roll))
+
+        # Gráfico
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15, 8), sharex=True)
+        fig.suptitle(f'Sensor {i}', fontsize=18)
+
+        ax1.scatter(df['date_time'], df['pitch'], c=df['pitch_color'])
+        ax1.axhline(mean_pitch, color='gray', linestyle='--', label='Media Pitch')
+        ax1.set_ylabel('Pitch')
+        ax1.legend()
+        ax1.set_title('Pitch')
+
+        ax2.scatter(df['date_time'], df['roll'], c=df['roll_color'])
+        ax2.axhline(mean_roll, color='gray', linestyle='--', label='Media Roll')
+        ax2.set_ylabel('Roll')
+        ax2.set_xlabel('Fecha')
+        ax2.legend()
+        ax2.set_title('Roll')
+
+        plt.tight_layout()
+        plt.show()
 # Función que representa los sensores coloreando los puntos
 representar_sensores_red(43, 49)
 
@@ -128,10 +171,10 @@ sensor_62 = sensor_62.drop_duplicates()
 sensor_63 = sensor_63.drop_duplicates()
 
 # Función que representa los sensores coloreando los puntos
-representar_sensores_red(43, 49)
+representar_sensores_red(60, 63)
 
 #Aplicamos un parametro para limpiar los outliers de 2024 a la funcion 
-representar_sensores_red(43, 49, aplicar_limpieza=True)
+representar_sensores_red(60, 63, aplicar_limpieza=True)
 
 # Renombrar columnas para el merge
 sensor_60 = renombrar_columnas(sensor_60, 60)
@@ -344,10 +387,10 @@ def probar_modelos_con_gridsearch(df, columna_objetivo, columnas_features, model
 
     return resultados
 
-
+#%%
 interpolados = pd.read_csv('mergeados_interpolados_normalizados.csv')
 por_fecha = pd.read_csv('mergeados_normalizados.csv')
-
+#%%
 columna_objetivo = 'weight_nu4'
 
 columnas_features = por_fecha.drop(columns=['weight_nu1', 'weight_nu2','weight_nu3','weight_nu4','date_time']).columns
@@ -365,6 +408,10 @@ nombre_df = 'por_fecha'
 nombre_archivo = f"resultados_{columna_objetivo}_{nombre_df}.xlsx"
 df_resultados.to_excel(nombre_archivo)
 
+
+
+
+
 # %% CROSS VALIDATION
 
 # Configuramod el modelo GradientBoostingRegressor con los mejores parámetros para cada tecnica
@@ -377,19 +424,21 @@ mejor_gb_inter = GradientBoostingRegressor(
 )
 
 mejor_gb_merge = GradientBoostingRegressor(
-    n_estimators=100,
-    max_depth=7,
+    n_estimators=200,
+    max_depth=3,
     learning_rate=0.1,
-    subsample=0.8,
+    subsample=1.0,
     random_state=42
 )
 
 
+
+
 X_mergeados = por_fecha.drop(columns=['weight_nu1', 'weight_nu2', 'weight_nu3', 'weight_nu4', 'date_time'])
-y_mergeados = por_fecha['weight_nu1']
+y_mergeados = por_fecha['weight_nu2']
 
 X_interpolados = interpolados.drop(columns=['weight_nu1', 'weight_nu2','weight_nu3','weight_nu4','date_time'])
-y_interpolados = interpolados['weight_nu1']
+y_interpolados = interpolados['weight_nu2']
 
 resultados_interpolados = evaluar_con_validacion_cruzada(X_interpolados, y_interpolados, mejor_gb_inter)
 resultados_mergeados = evaluar_con_validacion_cruzada(X_mergeados, y_mergeados, mejor_gb_merge)
@@ -410,14 +459,14 @@ print(f"MAE medio: {resultados_mergeados['MAE medio']:.4f}")
 plt.figure(figsize=(12, 6))
 plt.subplot(1, 2, 1)
 plt.bar(range(1, 6), resultados_interpolados['Resultados por fold']['R2'], color='blue', alpha=0.7)
-plt.ylim(0.8, 1.0) 
+plt.ylim(0.5, 1.0) 
 plt.title('R² por fold - Interpolados')
 plt.xlabel('Fold')
 plt.ylabel('R²')
 
 plt.subplot(1, 2, 2)
 plt.bar(range(1, 6), resultados_mergeados['Resultados por fold']['R2'], color='green', alpha=0.7)
-plt.ylim(0.8, 1.0) 
+plt.ylim(0.5, 1.0) 
 plt.title('R² por fold - Mergeados')
 plt.xlabel('Fold')
 plt.ylabel('R²')
@@ -426,17 +475,21 @@ plt.tight_layout()
 plt.show()
 
 # %% Análisis de los residuos
+X_mergeados = por_fecha.drop(columns=['weight_nu1', 'weight_nu2', 'weight_nu3', 'weight_nu4', 'date_time'])
+y_mergeados = por_fecha['weight_nu4']
 
+X_interpolados = interpolados.drop(columns=['weight_nu1', 'weight_nu2','weight_nu3','weight_nu4','date_time'])
+y_interpolados = interpolados['weight_nu4']
 
 # modelo con datos interpolados
 X_train_i, X_test_i, y_train_i, y_test_i = train_test_split(X_interpolados, y_interpolados, test_size=0.3, random_state=42)
-modelo_interpolado = GradientBoostingRegressor(n_estimators=200, random_state=42, max_depth=5, learning_rate=0.05, subsample=0.8)
+modelo_interpolado = GradientBoostingRegressor(n_estimators=200, random_state=42, max_depth=7, learning_rate=0.1, subsample=0.9)
 modelo_interpolado.fit(X_train_i, y_train_i)
 y_pred_i = modelo_interpolado.predict(X_test_i)
 
 #  modelo con datos mergeados
 X_train_m, X_test_m, y_train_m, y_test_m = train_test_split(X_mergeados, y_mergeados, test_size=0.3, random_state=42)
-modelo_mergeado = GradientBoostingRegressor(n_estimators=100, random_state=42, max_depth=7, learning_rate=0.1,subsample=0.8)
+modelo_mergeado = GradientBoostingRegressor(n_estimators=200, random_state=42, max_depth=7, learning_rate=0.05, subsample=0.8)
 modelo_mergeado.fit(X_train_m, y_train_m)
 y_pred_m = modelo_mergeado.predict(X_test_m)
 
