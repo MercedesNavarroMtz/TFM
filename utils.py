@@ -59,7 +59,8 @@ def representacion_umbral_carga(df, sensor_name):
 
     """
     
-    
+    Función que reprersenta el sensor de carga y colorea los extremos
+
     """
     x = df['date_time']
     y = df[sensor_name]
@@ -83,6 +84,8 @@ def representacion_umbral_carga(df, sensor_name):
 
 def color_points(value, mean):
     """
+
+    Colorea los valores de sensor de red que superen el umbral
     
     """
 
@@ -98,7 +101,7 @@ def color_points(value, mean):
 def remove_outliers_may_2024(df, column):
     """
     
-    XXXXXXXX
+    Elimina los outliers de mayo de 2024 para los sensores de red y flotabilidad
     
     """
     mask_may = (df['date_time'].dt.year == 2024) & (df['date_time'].dt.month == 5)
@@ -119,9 +122,7 @@ def remove_outliers_may_2024(df, column):
 def renombrar_columnas(df, sensor_id):
     """
     Renombra las columnas del sensor de carga con el id del sensor
-    
-    Args: XXXXXXXX 
-    
+  
     """
     df = df.copy()
     df.columns = [
@@ -142,14 +143,13 @@ def analizar_residuos(y_true, y_pred, titulo="Análisis de residuos", mostrar_gr
         mostrar_graficos: si se deben mostrar los gráficos
     
     Returns:
-        dict: diccionario con estadísticas de los residuos
+        stats_residuos: diccionario con estadísticas de los residuos
     """
 
     residuos = y_true - y_pred
     residuos_abs = np.abs(residuos)
     residuos_norm = residuos / np.std(residuos)
     
-    # Estadísticas 
     stats_residuos = {
         'Media': np.mean(residuos),
         'Mediana': np.median(residuos),
@@ -162,7 +162,6 @@ def analizar_residuos(y_true, y_pred, titulo="Análisis de residuos", mostrar_gr
         'R²': r2_score(y_true, y_pred)
     }
     
-    # Verificar normalidad
     # Test de Shapiro-Wilk
     shapiro_test = stats.shapiro(residuos)
     stats_residuos['Shapiro-Wilk p-value'] = shapiro_test[1]
@@ -172,7 +171,7 @@ def analizar_residuos(y_true, y_pred, titulo="Análisis de residuos", mostrar_gr
 
         fig = plt.figure(figsize=(16, 12))
         
-        # Residuos vs Valores predichos
+        # Residuos vs valores predichos
         ax1 = fig.add_subplot(221)
         ax1.scatter(y_pred, residuos, alpha=0.6)
         ax1.axhline(y=0, color='r', linestyle='-')
@@ -201,7 +200,7 @@ def analizar_residuos(y_true, y_pred, titulo="Análisis de residuos", mostrar_gr
         ax3.set_ylabel('Ordered values', fontsize=14)
 
         
-        # Residuos absolutos vs Valores predichos (heteroscedasticidad)
+        # Residuos absolutos vs valores predichos
         ax4 = fig.add_subplot(224)
         ax4.scatter(y_pred, residuos_abs, alpha=0.6)
         ax4.set_xlabel('Valores predichos', fontsize=14)
@@ -222,7 +221,17 @@ def analizar_residuos(y_true, y_pred, titulo="Análisis de residuos", mostrar_gr
 def evaluar_con_validacion_cruzada(X, y, modelo, n_folds=5):
     """
     Evalúa un modelo usando validación cruzada y retorna métricas detalladas.
+
+        Args:
+        X: valores conjunto de entrenamiento
+        y: valores objetivo
+        modelo: modelo con el que se van a hacer las predicciones
+        n_folds: numero de pliegues de validación cruzada (5)
+    
+    Returns:
+        resultados: resultados (métricas) de la validación cruzada
     """
+    
     kf = KFold(n_splits=n_folds, shuffle=True, random_state=42)
     
     r2_scores = []
@@ -267,7 +276,7 @@ def evaluar_con_validacion_cruzada(X, y, modelo, n_folds=5):
     
     return resultados
 
-#=========================================================
+#==============================================================================
 
 def comparar_residuos_modelos(modelos_y_datos, nombres_modelos=None):
     """
@@ -276,6 +285,9 @@ def comparar_residuos_modelos(modelos_y_datos, nombres_modelos=None):
     Args:
         modelos_y_datos: lista de tuplas (y_true, y_pred)
         nombres_modelos: lista de nombres para los modelos
+
+    Returns:
+        df_stats: resultados de la comparación de residuos
     """
     if nombres_modelos is None:
         nombres_modelos = [f"Modelo {i+1}" for i in range(len(modelos_y_datos))]

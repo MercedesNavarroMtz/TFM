@@ -10,13 +10,14 @@ from .serializers import *
 from rest_framework.response import Response
 from datetime import datetime
 from django.db import transaction
-from rest_framework.decorators import action
 from django_filters.rest_framework import DjangoFilterBackend, FilterSet, DateTimeFilter, NumberFilter, CharFilter
 import csv
-from .models import *
-from .serializers import *
+from django.views import View
+from django.http import HttpResponse
+
 
 # Create your views here.
+
 class EstacionViewSet(viewsets.ModelViewSet):
     queryset = Estacion.objects.all()
     permission_classes = (permissions.AllowAny,)
@@ -25,6 +26,10 @@ class EstacionViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'], url_path='upload-csv')
     def upload_csv(self, request):
+
+        """ Función que va a permitir subir los archivos CSV y procesarlos"""
+
+
         file = request.FILES.get('file')
         if not file:
             return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
@@ -32,10 +37,7 @@ class EstacionViewSet(viewsets.ModelViewSet):
         try:
 
             filename = file.name
-            print(f"Nombre del archivo recibido: {filename}")
-
             entity_prefix = os.path.splitext(filename)[0].split('_')[0].upper()
-            print(f"Entidad detectada: {entity_prefix}")
 
             try:
                 measure_entity = Entidad[entity_prefix].value
@@ -49,8 +51,6 @@ class EstacionViewSet(viewsets.ModelViewSet):
                 reader.fieldnames[0] = reader.fieldnames[0].replace('ï»¿', '')
             estaciones_creadas = 0
             estaciones_vistas = set()
-            print("Columnas detectadas en el CSV:", reader.fieldnames)
-
 
             for row in reader:
 
@@ -84,7 +84,9 @@ class EstacionViewSet(viewsets.ModelViewSet):
 
 
 def convertir_fecha(fecha_string):
+
     """Convierte una fecha de formato 'DD/MM/YYYY HH:MM' a 'YYYY-MM-DD HH:MM'"""
+
     if not fecha_string or fecha_string.strip() == '':
         return None
     
@@ -106,6 +108,7 @@ def convertir_fecha(fecha_string):
 
 
 
+
 class ValuesFilter(filters.FilterSet):
     station_id = filters.NumberFilter(field_name='station__id', lookup_expr='exact')
     station_name = filters.CharFilter(field_name='station__station', lookup_expr='icontains')
@@ -123,8 +126,11 @@ class ValuesFilter(filters.FilterSet):
             entity_value = Entidad[value.upper()].value
             return queryset.filter(station__measure_entity=entity_value)
         except (KeyError, AttributeError):
-            # Si el nombre no es válido, devolver queryset vacío
             return queryset.none()
+        
+
+
+
 
 class ValuesViewSet(viewsets.ModelViewSet):
     queryset = Values.objects.all()
@@ -135,6 +141,9 @@ class ValuesViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'], url_path='upload-csv')
     def upload_csv(self, request):
+
+        """ Función que va a permitir subir los archivos CSV y procesarlos"""
+
         file = request.FILES.get('file')
         if not file:
             return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
@@ -150,7 +159,7 @@ class ValuesViewSet(viewsets.ModelViewSet):
             values_created = 0
 
             for i, row in enumerate(reader):
-                # Leer los campos de la estación y otros datos
+                # Leer los campos de la estación
                 station_name = row.get('Estacion')
                 location = row.get('Localizacion_de_la_estacion')
                 latitude = row.get('Cordenada X')
@@ -169,31 +178,17 @@ class ValuesViewSet(viewsets.ModelViewSet):
                     latitude_int = int(float(latitude)) if latitude else None
                     longitude_int = int(float(longitude)) if longitude else None
                 except ValueError:
-                    print(" → Coordenadas inválidas:", latitude, longitude)
                     continue
 
                 if fecha:  # Verificar que fecha no esté vacía o sea solo espacios
                     fecha_convertida = convertir_fecha(fecha)
                     if not fecha_convertida:
-                        # print(f" → Fecha inválida en la fila {i}: '{fecha}', se omite.")
                         continue
                     fecha = fecha_convertida
                 else:
-                    # print(f" → Fecha vacía en la fila {i}, se omite.")
                     continue
 
-
-                # if fecha_final: # Verificar que fecha no esté vacía o sea solo espacios
-                #     fecha_convertida = convertir_fecha(fecha_final)
-                #     if not fecha_convertida:
-                #         print(f" → Fecha inválida en la fila {i}: '{fecha_final}', se omite.")
-                #         continue
-                #     fecha_final = fecha_convertida
-                # else:
-                #     print(f" → Fecha vacía en la fila {i}, se omite.")
-                #     continue
-
-            # Convertir el valor (value) a número
+            # Convertir el valor a número
                 if value:
                     try:
                         value = value.replace(',', '.')  # Reemplazar coma por punto
@@ -202,18 +197,14 @@ class ValuesViewSet(viewsets.ModelViewSet):
                         print(f" → Valor inválido en la fila {i}, se omite.")
                         continue
 
-                # Validar el parámetro
                 if parametro not in Parametro.values:
-                    print(f" → Parámetro desconocido: {parametro}. Se omite.")
                     continue
 
                 # Comprobar si la estación ya existe en la base de datos
                 estacion = Estacion.objects.filter(station=station_name).first()
                 if not estacion:
-                    print(f" → Estación {station_name} no encontrada en la base de datos.")
                     continue
 
-                # Crear o actualizar los datos relacionados en el modelo Values
                 Values.objects.create(
                     station=estacion,
                     datetime=fecha,
@@ -228,16 +219,12 @@ class ValuesViewSet(viewsets.ModelViewSet):
                 )
                 values_created += 1
 
-            print(f"\nTotal valores creados: {values_created}")
             return Response({'created': values_created}, status=status.HTTP_201_CREATED)
 
         except Exception as e:
             print("Error al procesar el CSV:", e)
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
-from django.views import View
-from django.shortcuts import render
-from django.http import HttpResponse
 
 class EstacionListView(View):
     def get(self, request):
@@ -246,6 +233,9 @@ class EstacionListView(View):
 
 
 def descargar_valores_estacion(request, estacion_id):
+
+    """ Función que permite descargar los datos en CSV """
+
     estacion = Estacion.objects.get(id=estacion_id)
     datos = Values.objects.filter(station=estacion)
 

@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 import pandas as pd
 import io
 import os
@@ -11,6 +11,12 @@ from datetime import datetime
 from django.db import transaction
 from rest_framework.decorators import action
 from django_filters.rest_framework import DjangoFilterBackend, FilterSet, DateTimeFilter, NumberFilter, CharFilter
+from django.views import View
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from django.http import StreamingHttpResponse
+import csv
+
 
 
 
@@ -52,10 +58,12 @@ class SensorLoadViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post', 'get'], url_path='update-csv', permission_classes=[permissions.AllowAny])
     def update_csv(self, request):
+
+        """ Función que va a permitir subir los archivos CSV y procesarlos"""
+
         if request.method == 'GET':
             return Response(template_name='upload_form.html') 
         
-        # Si es POST, procesar el archivo
         print(" Recibida solicitud POST en /update-csv/")
         print(" request.FILES:", request.FILES)
 
@@ -72,8 +80,6 @@ class SensorLoadViewSet(viewsets.ModelViewSet):
             return Response({"error": "No se proporcionó ningún archivo"}, status=status.HTTP_400_BAD_REQUEST)
 
         filename = os.path.splitext(file.name)[0]
-        print(f"Nombre del archivo recibido: {filename}")
-
 
         try:
             # Extraer el nombre del sensor del formato "sensor_nu2_3_4_24"
@@ -82,7 +88,6 @@ class SensorLoadViewSet(viewsets.ModelViewSet):
                 raise ValueError("Formato de nombre de archivo incorrecto")
                 
             sensor_name = parts[1]
-            print(f" Nombre de sensor extraído del archivo: {sensor_name}")
             
         except ValueError as e:
             print(f" Error: {str(e)}")
@@ -92,8 +97,6 @@ class SensorLoadViewSet(viewsets.ModelViewSet):
         if not sensor:
             print(f" No se encontró un sensor con el nombre '{sensor_name}'")
             return Response({"error": f"No se encontró un sensor con el nombre '{sensor_name}'"}, status=status.HTTP_400_BAD_REQUEST)
-
-        print(f" Sensor encontrado: {sensor.name} (ID: {sensor.id})")
 
         decoded_file = file.read().decode('latin-1')
         contenido = decoded_file.strip().splitlines()
@@ -111,6 +114,7 @@ class SensorLoadViewSet(viewsets.ModelViewSet):
             }
 
         def convertir_fecha(fecha_str):
+            """Transforma la fecha al formato correcto"""
             for mes_es, mes_num in meses.items():
                 if mes_es in fecha_str:
                     fecha_str = fecha_str.replace(mes_es, mes_num)
@@ -154,7 +158,7 @@ class SensorLoadViewSet(viewsets.ModelViewSet):
 
         return Response({"message": f"Datos actualizados correctamente para sensor {sensor.id}"}, status=status.HTTP_200_OK)
 
-class SensorSclFilter(FilterSet):
+class SensorSclFilter(FilterSet): # Filtros 
     sensor_id = NumberFilter(field_name="sensor__id", lookup_expr='exact')
     sensor_name = CharFilter(field_name="sensor__name", lookup_expr='icontains')
     date_from = DateTimeFilter(field_name="date_time", lookup_expr='gte')
@@ -176,6 +180,9 @@ class SensorSCLyFlotViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'], url_path='update-csv', permission_classes=[permissions.AllowAny])
     def update_csv(self, request):
+
+        """ Función que va a permitir subir los archivos CSV y procesarlos"""
+
         print(" Recibida solicitud POST en /update-csv/")
         print(" request.FILES:", request.FILES)
 
@@ -192,7 +199,6 @@ class SensorSCLyFlotViewSet(viewsets.ModelViewSet):
             return Response({"error": "No se proporcionó ningún archivo"}, status=status.HTTP_400_BAD_REQUEST)
 
         filename = os.path.splitext(file.name)[0]
-        print(f"Nombre del archivo recibido: {filename}")
 
         try:
             sensor_id = int(filename[-2:])
@@ -212,8 +218,6 @@ class SensorSCLyFlotViewSet(viewsets.ModelViewSet):
 
         decoded_file = file.read().decode('latin-1')
         df = pd.read_csv(io.StringIO(decoded_file), delimiter=',', quotechar='"')
-
-        print(f"Primeras filas del archivo CSV:\n{df.head()}")
 
         df['sensor_id'] = sensor.id  
 
@@ -263,6 +267,9 @@ class SensorCorrViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'], url_path='update-csv', permission_classes=[permissions.AllowAny])
     def update_csv(self, request):
+
+        """ Función que va a permitir subir los archivos CSV y procesarlos"""
+
         print(" Recibida solicitud POST en /update-csv/")
         print(" request.FILES:", request.FILES)
 
@@ -279,7 +286,6 @@ class SensorCorrViewSet(viewsets.ModelViewSet):
             return Response({"error": "No se proporcionó ningún archivo"}, status=status.HTTP_400_BAD_REQUEST)
 
         filename = os.path.splitext(file.name)[0]
-        print(f"Nombre del archivo recibido: {filename}")
 
         try:
             sensor_id = filename.split('_')[0]  # Esto se queda con 'AQUA101'
@@ -368,24 +374,22 @@ class SensorCorrViewSet(viewsets.ModelViewSet):
             objects = [SensorCorr(**data) for data in data_list]
             SensorCorr.objects.bulk_create(objects, batch_size=3000)
 
-        print(f"{len(data_list)} registros guardados en la base de datos para el sensor {sensor.id}")
-
         return Response({"message": f"Datos actualizados correctamente para sensor {sensor.id}"}, status=status.HTTP_200_OK)
     
-from django.views import View
-from django.http import HttpResponse
-from django.template.loader import render_to_string
 
+# Aqui creamos las vistas para el pequeño front
 class SensorListView(View):
     def get(self, request):
         sensores = Sensor.objects.all()
         return render(request, 'sensores/lista.html', {'sensores': sensores})
 
 
-from django.http import StreamingHttpResponse
-import csv
 
 def descargar_datos_sensor(request, sensor_id):
+
+    """ Función que va a permitir la descarga de archivos de datos en el front"""
+
+
     sensor = Sensor.objects.get(id=sensor_id)
     datos = SensorLoad.objects.filter(sensor=sensor)
 
@@ -401,7 +405,6 @@ def descargar_datos_sensor(request, sensor_id):
     return response
 
 
-from django.shortcuts import render, redirect
 
 
 
@@ -411,6 +414,10 @@ class ProyectoSelectorView(View):
         return render(request, 'proyectos/select.html', {'proyectos': proyectos})
 
 def ver_proyecto(request):
+
+    """ Función que va a mostrar todos los sensores y estaciones en el front"""
+
+
     proyecto = request.GET.get('proyecto')
 
     if proyecto == 'aquamore':

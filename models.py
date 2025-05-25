@@ -93,9 +93,9 @@ def representar_sensores_red(inicio, fin, aplicar_limpieza=False):
     Procesa y grafica los datos de pitch y roll para sensores en el rango dado.
 
     Args:
-        inicio (int): Número inicial del sensor
-        fin (int): Número final del sensor
-        aplicar_limpieza (bool): Si True, elimina outliers de mayo 2024.
+        inicio: Número inicial del sensor
+        fin: Número final del sensor
+        aplicar_limpieza: Si True, elimina outliers de mayo 2024.
     """
     for i in range(inicio, fin + 1):
         df = globals()[f'sensor_{i}'].copy()
@@ -305,7 +305,7 @@ df_scaled_fecha[variables] = scaler.fit_transform(merged_fecha[variables])
 
 parametros_rf = {
     'n_estimators': [100, 150, 200],  # Número de árboles 
-    'max_depth': [5, 10, None],        # Profundidad de los árboles
+    'max_depth': [5, 10, None],        # Profundidad árboles
     'min_samples_split': [2, 5, 10],   # Mínimo número de muestras requeridas para dividir un nodo
     'min_samples_leaf': [1, 2, 4],     # Mínimo número de muestras requeridas en una hoja
     'bootstrap': [True, False]         # Si usar o no muestreo bootstrap
@@ -314,7 +314,7 @@ parametros_rf = {
 parametros_gb = {
     'n_estimators': [100, 150, 200],  # Número de árboles en el modelo
     'learning_rate': [0.01, 0.05, 0.1], # Tasa de aprendizaje
-    'max_depth': [3, 5, 7],            # Profundidad máxima de los árboles
+    'max_depth': [3, 5, 7],            # Profundidad 
     'subsample': [0.8, 0.9, 1.0]       # Proporción de muestras usadas para entrenar cada árbol
 }
 
@@ -390,8 +390,8 @@ def probar_modelos_con_gridsearch(df, columna_objetivo, columnas_features, model
 #%%
 interpolados = pd.read_csv('mergeados_interpolados_normalizados.csv')
 por_fecha = pd.read_csv('mergeados_normalizados.csv')
-#%%
-columna_objetivo = 'weight_nu4'
+
+columna_objetivo = 'weight_nu4' # variar según la predicción
 
 columnas_features = por_fecha.drop(columns=['weight_nu1', 'weight_nu2','weight_nu3','weight_nu4','date_time']).columns
 
@@ -404,7 +404,7 @@ resultados_nu = probar_modelos_con_gridsearch(por_fecha,columna_objetivo,columna
 )
 
 df_resultados = pd.DataFrame(resultados_nu).T 
-nombre_df = 'por_fecha'
+nombre_df = 'por_fecha' # variar según el método
 nombre_archivo = f"resultados_{columna_objetivo}_{nombre_df}.xlsx"
 df_resultados.to_excel(nombre_archivo)
 
@@ -414,7 +414,7 @@ df_resultados.to_excel(nombre_archivo)
 
 # %% CROSS VALIDATION
 
-# Configuramod el modelo GradientBoostingRegressor con los mejores parámetros para cada tecnica
+# Configuramod el modelo GradientBoostingRegressor con los mejores parámetros para cada tecnica - esto varia tb
 mejor_gb_inter = GradientBoostingRegressor(
     n_estimators=200,
     max_depth=5,
@@ -476,18 +476,18 @@ plt.show()
 
 # %% Análisis de los residuos
 X_mergeados = por_fecha.drop(columns=['weight_nu1', 'weight_nu2', 'weight_nu3', 'weight_nu4', 'date_time'])
-y_mergeados = por_fecha['weight_nu4']
+y_mergeados = por_fecha['weight_nu4'] # Variación segun variable objetivo
 
 X_interpolados = interpolados.drop(columns=['weight_nu1', 'weight_nu2','weight_nu3','weight_nu4','date_time'])
-y_interpolados = interpolados['weight_nu4']
+y_interpolados = interpolados['weight_nu4'] # Variación segun variable objetivo
 
-# modelo con datos interpolados
+# modelo con datos interpolados (varia dependiendo de la técnica y modelo)
 X_train_i, X_test_i, y_train_i, y_test_i = train_test_split(X_interpolados, y_interpolados, test_size=0.3, random_state=42)
 modelo_interpolado = GradientBoostingRegressor(n_estimators=200, random_state=42, max_depth=7, learning_rate=0.1, subsample=0.9)
 modelo_interpolado.fit(X_train_i, y_train_i)
 y_pred_i = modelo_interpolado.predict(X_test_i)
 
-#  modelo con datos mergeados
+#  modelo con datos mergeados (varia dependiendo de la técnica y modelo)
 X_train_m, X_test_m, y_train_m, y_test_m = train_test_split(X_mergeados, y_mergeados, test_size=0.3, random_state=42)
 modelo_mergeado = GradientBoostingRegressor(n_estimators=200, random_state=42, max_depth=7, learning_rate=0.05, subsample=0.8)
 modelo_mergeado.fit(X_train_m, y_train_m)
