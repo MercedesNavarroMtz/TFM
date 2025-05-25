@@ -1,0 +1,13 @@
+[
+    {
+      "model": "aquamore.infrastructure",
+      "pk": 1,
+      "fields": {
+        "type":0,
+        "name": "Jaula01",
+        "location": "Piscialba",
+        "user": "Mercedes"
+      }
+    }
+
+  ]

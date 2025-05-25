@@ -1,0 +1,148 @@
+[
+
+    {
+        "model": "aquamore.sensor",
+        "pk": 1,
+        "fields": {
+          "infrastructure":1,
+          "name": "nu1",
+          "sensor_type": 0
+        }
+      },
+      {
+          "model": "aquamore.sensor",
+          "pk": 2,
+          "fields": {
+            "infrastructure":1,
+            "name": "nu2",
+            "sensor_type": 0
+          }
+        },
+        {
+            "model": "aquamore.sensor",
+            "pk": 3,
+            "fields": {
+              "infrastructure":1,
+              "name": "nu3",
+              "sensor_type": 0
+            }
+          },
+          {
+            "model": "aquamore.sensor",
+            "pk": 4,
+            "fields": {
+              "infrastructure":1,
+              "name": "nu4",
+              "sensor_type": 0
+            }
+          },
+          {
+            "model": "aquamore.sensor",
+            "pk": 5,
+            "fields": {
+              "infrastructure":1,
+              "name": "43",
+              "sensor_type": 1
+            }
+          },
+          {
+            "model": "aquamore.sensor",
+            "pk": 6,
+            "fields": {
+              "infrastructure":1,
+              "name": "44",
+              "sensor_type": 1
+            }
+          },
+          {
+            "model": "aquamore.sensor",
+            "pk": 7,
+            "fields": {
+              "infrastructure":1,
+              "name": "45",
+              "sensor_type": 1
+            }
+          },
+          {
+            "model": "aquamore.sensor",
+            "pk": 8,
+            "fields": {
+              "infrastructure":1,
+              "name": "46",
+              "sensor_type": 1
+            }
+          },
+          {
+            "model": "aquamore.sensor",
+            "pk": 9,
+            "fields": {
+              "infrastructure":1,
+              "name": "47",
+              "sensor_type": 1
+            }
+          },          {
+            "model": "aquamore.sensor",
+            "pk": 10,
+            "fields": {
+              "infrastructure":1,
+              "name": "48",
+              "sensor_type": 1
+            }
+          },          {
+            "model": "aquamore.sensor",
+            "pk": 11,
+            "fields": {
+              "infrastructure":1,
+              "name": "49",
+              "sensor_type": 1
+            }
+          },
+          {
+            "model": "aquamore.sensor",
+            "pk": 12,
+            "fields": {
+              "infrastructure":1,
+              "name": "60",
+              "sensor_type": 1
+            }
+          },        
+          {
+            "model": "aquamore.sensor",
+            "pk": 13,
+            "fields": {
+              "infrastructure":1,
+              "name": "61",
+              "sensor_type": 2
+            }
+          },          
+          {
+            "model": "aquamore.sensor",
+            "pk": 14,
+            "fields": {
+              "infrastructure":1,
+              "name": "62",
+              "sensor_type": 2
+            }
+          },          
+          {
+            "model": "aquamore.sensor",
+            "pk": 15,
+            "fields": {
+              "infrastructure":1,
+              "name": "63",
+              "sensor_type": 2
+            }
+          },
+          {
+            "model": "aquamore.sensor",
+            "pk": 16,
+            "fields": {
+              "infrastructure":1,
+              "name": "AQUA101",
+              "sensor_type": 3
+            }
+          }
+
+
+
+]

@@ -1,0 +1,75 @@
+services:
+  db:
+    container_name: citus_coordinator
+    build:
+      context: .
+      dockerfile: Dockerfile.db
+    ports:
+      - "${DB_PORT}:5432"
+    labels: ["com.citusdata.role=Master"]
+
+    environment: &AUTH
+      POSTGRES_USER: "${POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      POSTGRES_DB: "${POSTGRES_DB}"
+      PGUSER: "${POSTGRES_USER}"
+      PGPASSWORD: "${POSTGRES_PASSWORD}"
+      POSTGRES_HOST_AUTH_METHOD: "${POSTGRES_HOST_AUTH_METHOD:-trust}"
+    # volumes:
+    #   - ./data/coordinator:/var/lib/postgresql/data
+    restart: unless-stopped
+    depends_on:
+      - worker1
+      - worker2
+
+  worker1:
+    container_name: citus_worker1
+    build:
+      context: .
+      dockerfile: Dockerfile.db
+    labels: ["com.citusdata.role=Worker"]
+    environment: *AUTH
+    # volumes:
+    #   - ./data/worker1:/var/lib/postgresql/data
+    volumes:
+      - healthcheck-volume:/healthcheck
+    restart: unless-stopped
+
+  worker2:
+    container_name: citus_worker2
+    build:
+      context: .
+      dockerfile: Dockerfile.db
+    labels: ["com.citusdata.role=Worker"]
+    environment: *AUTH
+    # volumes:
+    #   - ./data/worker2:/var/lib/postgresql/data
+    volumes:
+      - healthcheck-volume:/healthcheck
+    restart: unless-stopped
+
+  web:
+    container_name: data_hub_back
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${WEB_PORT}:8000"
+    volumes:
+      - .:/code
+    restart: unless-stopped
+    depends_on:
+      - db
+
+  redis:
+    image: "redis:7.2-rc1-alpine3.17"
+    restart: unless-stopped
+    privileged: true
+    command: redis-server --requirepass $REDIS_PASSWORD
+    ports:
+      - ${REDIS_PORT}:6379
+    volumes:
+      - ./_data/redis:/var/lib/redis
+
+volumes:
+  healthcheck-volume:

@@ -1,0 +1,124 @@
+#!/bin/bash
+
+docker-compose --version 2> error.txt
+fichero=$(pwd)/error.txt
+DOCKER_COMPOSE=""
+
+if test -s "$fichero"
+then
+	DOCKER_COMPOSE="docker compose"
+else
+	DOCKER_COMPOSE="docker-compose"
+fi
+rm error.txt
+
+
+# *******        TRAP CTRL C TO STOP (GRACEFULLY)        ********
+# ***************************************************************
+trap ctrl_c INT
+function ctrl_c() {
+    echo "Docker Manager - Trying to stop gracefully..."
+    if [ "${IS_PRODUCTION}" = "True" ]; then
+        eval $DOCKER_COMPOSE -f docker-compose-prod.yml stop
+    else
+        eval $DOCKER_COMPOSE stop
+    fi
+}
+
+echo "*****************************************"
+echo "*                                       *"
+echo "*            Docker Manager             *"
+echo "*                                       *"
+echo "*****************************************"
+
+if [ $# -lt 1 ] 
+then
+	echo
+	echo "##################################################################################"
+	echo "#   DOCKER MANAGER usage:                                                        #"
+	echo "#    - In Windows: run with 'sh docker-manager **args**'                         #"
+	echo "#    - In linux:   run with './docker-manager **args**'                          #"
+	echo "#                                                                                #"
+	echo "#   Use with the same args as docker-compose: [up, stop, down]                   #"
+	echo "#    - Example: 'sh docker-manager up -d'                                        #"
+	echo "#                                                                                #"
+	echo "#   Use '--initial' to run migrations and fixtures (only with 'up' command)      #"
+	echo "#    - Example: 'sh docker-manager up --initial'                                 #"
+	echo "##################################################################################"
+	echo
+else
+    # *************           CHECK IF MIGRATE           **************
+    # *****************************************************************
+    if [ "${2}" = "--initial" ] || [ "${3}" = "--initial" ]; then
+        MIGRATE=True
+    else
+        MIGRATE=False
+    fi
+    entrypointfile='entrypoint.sh'
+    NEWFILE=''
+    # Set = as delimiter
+    IFS='='
+    while read line; do
+        #Read the pairs key/value into an array based on "=" delimiter
+        read -a strarr <<< ${line}
+
+        #Assign var values
+        if [ "$NEWFILE" != '' ]; then
+            NEWFILE="$NEWFILE"$'\n'
+        fi
+        if [ "${strarr[0]}" = "MIGRATE" ]; then
+            NEWFILE="$NEWFILE""MIGRATE=$MIGRATE"
+        else
+            NEWFILE="$NEWFILE""$line"
+        fi
+    done < $entrypointfile
+
+    echo "$NEWFILE" > entrypoint_generated.sh
+
+
+    # ***********           CHECK IF PRODUCTION           ***********
+    # ***************************************************************
+    envfile='.env'
+    # Set = as delimiter
+    IFS='='
+    while read line; do
+        #Read the pairs key/value into an array based on "=" delimiter
+        read -a strarr <<< ${line}
+
+        #Assign var values
+        if [ "${strarr[0]}" = "IS_PRODUCTION" ]; then
+            IS_PRODUCTION=${strarr[1]}
+        fi
+    done < $envfile
+
+
+    # ***********           RUN DOCKER COMPOSE           ************
+    # ***************************************************************
+    if [ "${IS_PRODUCTION}" = "True" ]; then
+        if [ "$1" != "up" ]; then
+            eval $DOCKER_COMPOSE -f docker-compose-prod.yml $1
+        else
+            echo -e "Running in \e[92mPRODUCTION\e[39m environment"
+            echo ""
+            if [ $# = 1 ] || [ "$2" = "--initial" ]; then
+            	eval $DOCKER_COMPOSE -f docker-compose-prod.yml up -d
+            	eval $DOCKER_COMPOSE logs -f --tail 12
+            else
+                eval $DOCKER_COMPOSE -f docker-compose-prod.yml up -d
+            fi
+        fi
+    else
+        if [ "$1" != "up" ]; then
+            eval $DOCKER_COMPOSE $1
+        else
+            echo -e "Running in \e[92mDEVELOPMENT\e[39m environment"
+            echo ""
+            if [ $# = 1 ] || [ "$2" = "--initial" ]; then
+                eval $DOCKER_COMPOSE up -d
+                eval $DOCKER_COMPOSE logs -f --tail 12
+            else
+                eval $DOCKER_COMPOSE up -d
+            fi
+        fi
+    fi
+fi

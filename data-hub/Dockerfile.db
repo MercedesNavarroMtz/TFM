@@ -1,0 +1,12 @@
+FROM citusdata/citus:12.1.6
+
+RUN apt-get update && apt-get install -y curl
+RUN apt-get -y install postgresql-16-cron
+
+
+RUN echo "shared_preload_libraries='citus,pg_cron'" >> /usr/share/postgresql/postgresql.conf.sample
+RUN echo "cron.database_name='data_hub_db'" >> /usr/share/postgresql/postgresql.conf.sample
+
+# Habilita la extensión pg_cron en PostgreSQL
+# RUN echo "shared_preload_libraries = 'pg_cron'" >> /usr/share/postgresql/postgresql.conf.sample && \
+#     echo "cron.database_name = 'postgres'" >> /usr/share/postgresql/postgresql.conf.sample
